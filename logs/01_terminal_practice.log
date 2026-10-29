@@ -1,0 +1,70 @@
+$ mkdir practice
+$ cd practice
+$ pwd
+/Users/hwang-jinjeon/코디세이/올인원/Cody_All_E1-1/practice
+$ mkdir -p project/docs project/src
+$ touch project/README.txt
+$ echo hello codyssey > project/docs/note.txt
+$ ls -la project
+total 0
+drwxr-xr-x@ 5 hwang-jinjeon  staff  160 10 30 00:07 .
+drwxr-xr-x@ 3 hwang-jinjeon  staff   96 10 30 00:07 ..
+drwxr-xr-x@ 3 hwang-jinjeon  staff   96 10 30 00:07 docs
+-rw-r--r--@ 1 hwang-jinjeon  staff    0 10 30 00:07 README.txt
+drwxr-xr-x@ 2 hwang-jinjeon  staff   64 10 30 00:07 src
+$ cd project
+$ pwd
+/Users/hwang-jinjeon/코디세이/올인원/Cody_All_E1-1/practice/project
+$ ls -a
+.
+..
+docs
+README.txt
+src
+$ cat docs/note.txt
+hello codyssey
+$ cp docs/note.txt docs/note_copy.txt
+$ mv docs/note_copy.txt src/renamed.txt
+$ mv src/renamed.txt src/moved_and_renamed.txt
+$ touch .hidden_config
+$ ls -la
+total 0
+drwxr-xr-x@ 6 hwang-jinjeon  staff  192 10 30 00:07 .
+drwxr-xr-x@ 3 hwang-jinjeon  staff   96 10 30 00:07 ..
+-rw-r--r--@ 1 hwang-jinjeon  staff    0 10 30 00:07 .hidden_config
+drwxr-xr-x@ 3 hwang-jinjeon  staff   96 10 30 00:07 docs
+-rw-r--r--@ 1 hwang-jinjeon  staff    0 10 30 00:07 README.txt
+drwxr-xr-x@ 3 hwang-jinjeon  staff   96 10 30 00:07 src
+$ ls -R
+docs
+README.txt
+src
+
+./docs:
+note.txt
+
+./src:
+moved_and_renamed.txt
+$ cat src/moved_and_renamed.txt
+hello codyssey
+$ rm src/moved_and_renamed.txt
+$ rm -r src
+$ ls -la
+total 0
+drwxr-xr-x@ 5 hwang-jinjeon  staff  160 10 30 00:07 .
+drwxr-xr-x@ 3 hwang-jinjeon  staff   96 10 30 00:07 ..
+-rw-r--r--@ 1 hwang-jinjeon  staff    0 10 30 00:07 .hidden_config
+drwxr-xr-x@ 3 hwang-jinjeon  staff   96 10 30 00:07 docs
+-rw-r--r--@ 1 hwang-jinjeon  staff    0 10 30 00:07 README.txt
+$ cd ..
+$ pwd
+/Users/hwang-jinjeon/코디세이/올인원/Cody_All_E1-1/practice
+$ ls ./project
+docs
+README.txt
+$ ls /Users/hwang-jinjeon/코디세이/올인원/Cody_All_E1-1/practice/project
+docs
+README.txt
+$ ls ../practice/project
+docs
+README.txt

@@ -1,0 +1,38 @@
+$ mkdir perm_test
+$ echo permission test > perm_test/file.txt
+# [파일] 변경 전
+$ ls -l perm_test/file.txt
+-rw-r--r--@ 1 hwang-jinjeon  staff  16 10 30 00:07 perm_test/file.txt
+$ stat -f "%Sp %Lp %N" perm_test/file.txt
+-rw-r--r-- 644 perm_test/file.txt
+$ chmod 600 perm_test/file.txt
+# [파일] 600 적용 후
+$ ls -l perm_test/file.txt
+-rw-------@ 1 hwang-jinjeon  staff  16 10 30 00:07 perm_test/file.txt
+$ chmod 644 perm_test/file.txt
+# [파일] 644 복구 후 / 실행권한 추가(u+x)
+$ chmod u+x perm_test/file.txt
+$ ls -l perm_test/file.txt
+-rwxr--r--@ 1 hwang-jinjeon  staff  16 10 30 00:07 perm_test/file.txt
+$ chmod 644 perm_test/file.txt
+
+# [디렉토리] 변경 전
+$ ls -ld perm_test
+drwxr-xr-x@ 3 hwang-jinjeon  staff  96 10 30 00:07 perm_test
+$ chmod 000 perm_test
+# [디렉토리] 000 적용 후 -> 접근 시도
+$ ls -ld perm_test
+d---------  3 hwang-jinjeon  staff  96 10 30 00:07 perm_test
+$ ls perm_test
+ls: perm_test: Permission denied
+$ cat perm_test/file.txt
+cat: perm_test/file.txt: Permission denied
+$ chmod 755 perm_test
+# [디렉토리] 755 복구 후
+$ ls -ld perm_test
+drwxr-xr-x@ 3 hwang-jinjeon  staff  96 10 30 00:07 perm_test
+$ ls perm_test
+file.txt
+$ chmod 755 perm_test/file.txt
+$ ls -l perm_test/file.txt
+-rwxr-xr-x@ 1 hwang-jinjeon  staff  16 10 30 00:07 perm_test/file.txt
