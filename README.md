@@ -9,6 +9,36 @@
 - Git: 2.39.5 (Apple Git-154)
 - Docker: 29.8.2 (OrbStack 2.2.5, 컨테이너 엔진 포함)
 
+## 2-1) 저장소 구조
+```text
+Cody_All_E1-1/
+├── README.md        # 기술 문서 (전체 수행 내용의 진입점)
+├── Dockerfile       # 커스텀 이미지 정의 (nginx:alpine + app/)
+├── .gitignore       # 제출에서 제외할 로컬 파일 지정 (terminal-01/, .DS_Store)
+├── app/             # 컨테이너가 서비스하는 웹 콘텐츠(소스)
+│   └── index.html
+├── logs/            # 명령 출력 로그 원본 (증거)
+├── screenshots/     # 브라우저·VS Code 화면 (증거)
+├── project/         # 4-1 터미널 조작 실습으로 만든 폴더
+└── practice/        # 초기 터미널·권한 연습 파일
+```
+
+| 디렉토리/파일 | 역할 (1문장) |
+|---|---|
+| `README.md` | 개요, 환경, 체크리스트, 수행 로그, 검증 방법, 트러블슈팅을 담은 기술 문서이다. |
+| `Dockerfile` | `nginx:alpine` 위에 `app/`을 복사해 커스텀 이미지를 만드는 레시피이다. |
+| `app/` | 이미지에 복사되고 바인드 마운트로도 연결되는 웹 페이지 소스이다. |
+| `logs/` | README에 붙이기 어려운 긴 명령 출력의 원본을 보관한다. |
+| `screenshots/` | 포트 매핑, 바인드 마운트, GitHub 연동의 화면 증거를 보관한다. |
+| `project/` | 파일·폴더 생성, 복사, 이동, 삭제 실습의 결과물이다. |
+| `practice/` | 초기에 연습한 터미널·권한 실습 파일이다. |
+
+**구성 기준**
+- **실행 요소와 증거를 나눴다.** `Dockerfile`과 `app/`은 `docker build`·`docker run`에 쓰는 실행 요소이고, `logs/`와 `screenshots/`는 결과를 보여 주는 증거이다. 평가자가 실행 방법은 루트에서, 결과는 증거 폴더에서 바로 찾을 수 있다.
+- **`Dockerfile`은 루트에 두었다.** `docker build .`의 빌드 컨텍스트가 저장소 루트라서 `COPY app/ ...`처럼 `app/`을 상대 경로로 참조할 수 있다.
+- **소스(`app/`)를 분리했다.** 웹 콘텐츠만 `app/`에 두어, 이미지에 복사(`COPY`)하거나 컨테이너에 바인드 마운트할 때 대상 폴더를 하나로 고정했다.
+- **연습 파일과 제출 대상을 구분했다.** 로컬 연습용 `terminal-01/`은 `.gitignore`로 제외하고, 제출에는 README에서 다루는 실습 결과만 포함했다.
+
 ## 3) 수행 체크리스트
 - [x] 터미널 기본 조작 및 폴더 구성
 - [x] 권한 변경 실습
@@ -545,6 +575,134 @@ remote.origin.url=https://github.com/hippie-jin/cody_all_E1-1.git
 - 왼쪽: VS Code 계정 메뉴에 GitHub 계정 `hippie-jin (GitHub)`이 로그인된 상태로 표시된다.
 - 오른쪽: 소스 제어 화면의 그래프에서 로컬 `main`과 원격 `origin/main`이 함께 표시되어, 이 저장소가 GitHub 원격 저장소와 연결되어 있음을 알 수 있다.
 
+### 4-10) 포트 충돌 진단과 해제
+상황: 이미 `custom-web`이 호스트 8082 포트를 쓰고 있는데, 같은 포트로 새 컨테이너를 실행해 충돌을 일으키고 원인 프로세스를 찾아 해제했다.
+
+#### 1) 충돌 재현
+```text
+$ docker run -d --name conflict-web -p 8082:80 codyssey-web:1.0
+3195654f4e4d34136e42b272dacceda4f68a2ac29e69c37d13a0e3182e01046e
+docker: Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint conflict-web (bd9189fd07a8...): Bind for 0.0.0.0:8082 failed: port is already allocated
+
+Run 'docker run --help' for more information
+$ docker ps -a --filter name=conflict-web
+CONTAINER ID   IMAGE              COMMAND                   CREATED        STATUS    PORTS     NAMES
+3195654f4e4d   codyssey-web:1.0   "/docker-entrypoint.…"   1 second ago   Created             conflict-web
+
+# 같은 이름으로 다시 실행하면 이름 충돌
+$ docker run -d --name conflict-web -p 8082:80 codyssey-web:1.0
+docker: Error response from daemon: Conflict. The container name "/conflict-web" is already in use by container "3195654f4e4d...". You have to remove (or rename) that container to be able to reuse that name.
+
+# 남은 컨테이너를 지우고 다시 실행하면 같은 포트 오류가 재현된다
+$ docker rm conflict-web
+conflict-web
+$ docker run -d --name conflict-web -p 8082:80 codyssey-web:1.0
+d82e075da956ab6abf051585f64e2d0541e056e4b39eb93804cffc2c59568895
+docker: Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint conflict-web (0a935a56dfaa...): Bind for 0.0.0.0:8082 failed: port is already allocated
+$ docker ps -a --filter name=conflict-web
+CONTAINER ID   IMAGE              COMMAND                   CREATED          STATUS    PORTS     NAMES
+d82e075da956   codyssey-web:1.0   "/docker-entrypoint.…"   13 seconds ago   Created             conflict-web
+```
+
+#### 2) 포트를 사용 중인 프로세스 찾기
+```text
+$ docker ps --format 'table {{.Names}}\t{{.Ports}}'
+NAMES             PORTS
+volume-second
+bind-web          0.0.0.0:8083->80/tcp, [::]:8083->80/tcp
+custom-web        0.0.0.0:8082->80/tcp, [::]:8082->80/tcp
+attach-practice
+ubuntu-stay
+$ docker port custom-web
+80/tcp -> 0.0.0.0:8082
+80/tcp -> [::]:8082
+$ lsof -nP -iTCP:8082 -sTCP:LISTEN
+COMMAND     PID          USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+OrbStack  56164 hwang-jinjeon  103u  IPv4 0xcdbb2b330883d35d      0t0  TCP *:8082 (LISTEN)
+OrbStack  56164 hwang-jinjeon  104u  IPv6 0xfa560e7b5647c48e      0t0  TCP *:8082 (LISTEN)
+$ netstat -an -p tcp | grep 8082
+tcp46      0      0  *.8082                 *.*                    LISTEN
+tcp4       0      0  *.8082                 *.*                    LISTEN
+```
+
+- `docker ps`/`docker port`로 8082가 `custom-web`에 매핑되어 있음을 확인했다.
+- `lsof`의 `COMMAND`가 nginx가 아니라 `OrbStack`(PID 56164)으로 나온다. OrbStack이 호스트 포트를 대신 열어 두고 컨테이너로 전달하기 때문으로 보인다(추정). 따라서 이 PID는 `kill`하면 안 된다.
+- `-n`은 호스트 이름 변환을, `-P`는 포트 이름 변환을 끄고 숫자로 보여 주는 옵션이다. `-sTCP:LISTEN`은 대기(LISTEN) 상태만 보여 준다.
+
+#### 3) 해제 방법 A: 다른 호스트 포트로 실행
+```text
+$ docker rm conflict-web
+conflict-web
+$ docker run -d --name conflict-web -p 8090:80 codyssey-web:1.0
+0eef6ff4849aee7f166f140cd054e4268eea228aad29bac78ded81554e358f5e
+$ curl -s localhost:8090 | head -3
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+```
+
+#### 4) 해제 방법 B: 기존 컨테이너를 중지해 포트 해제
+```text
+$ docker stop custom-web
+custom-web
+$ lsof -nP -iTCP:8082 -sTCP:LISTEN; echo "exit=$?"
+exit=1
+$ docker start custom-web
+custom-web
+$ docker ps --format 'table {{.Names}}\t{{.Ports}}'
+NAMES             PORTS
+conflict-web      0.0.0.0:8090->80/tcp, [::]:8090->80/tcp
+volume-second
+bind-web          0.0.0.0:8083->80/tcp, [::]:8083->80/tcp
+custom-web        0.0.0.0:8082->80/tcp, [::]:8082->80/tcp
+attach-practice
+ubuntu-stay
+```
+
+- 컨테이너를 중지하면 `lsof`가 아무것도 출력하지 않는다(`exit=1`). 다시 시작하면 8082 매핑이 복구된다.
+
+#### 5) 일반 프로세스를 찾아 종료하는 절차
+터미널 A에서 8091 포트를 쓰는 간단한 서버를 실행하고, 터미널 B에서 찾아서 종료했다.
+```text
+# 터미널 A
+$ python3 -m http.server 8091
+Serving HTTP on :: port 8091 (http://[::]:8091/) ...
+Terminated: 15
+
+# 터미널 B
+$ lsof -nP -iTCP:8091 -sTCP:LISTEN
+COMMAND   PID          USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+Python  74473 hwang-jinjeon    4u  IPv6 0x74860ab653eeb583      0t0  TCP *:8091 (LISTEN)
+$ kill 74473
+$ lsof -nP -iTCP:8091 -sTCP:LISTEN; echo "exit=$?"
+exit=1
+```
+
+- 절차: ① `lsof`로 PID 확인 → ② `kill PID`(기본 신호 SIGTERM, 15) → ③ `lsof`로 사라졌는지 확인. 터미널 A의 `Terminated: 15`가 SIGTERM으로 종료되었다는 표시이다.
+- 정상 종료되지 않을 때만 마지막 수단으로 `kill -9 PID`(SIGKILL)를 쓴다.
+
+#### 6) 정리
+```text
+$ docker rm -f conflict-web
+conflict-web
+$ docker ps --format 'table {{.Names}}\t{{.Ports}}'
+NAMES             PORTS
+volume-second
+bind-web          0.0.0.0:8083->80/tcp, [::]:8083->80/tcp
+custom-web        0.0.0.0:8082->80/tcp, [::]:8082->80/tcp
+attach-practice
+ubuntu-stay
+```
+
+#### 포트 확인 명령 정리
+| 목적 | macOS (이 실습) | Linux (참고, 실행하지 않음) |
+|---|---|---|
+| 포트를 쓰는 프로세스 찾기 | `lsof -nP -iTCP:8082 -sTCP:LISTEN` | `ss -tlnp \| grep :8082`, `lsof -i :8082` |
+| 대기 중인 포트 목록 | `netstat -an -p tcp \| grep LISTEN` | `ss -tln` |
+| 프로세스 종료 | `kill PID` (필요하면 `kill -9 PID`) | 동일 |
+
+- macOS에는 `ss` 명령이 없다. `ss`는 Linux 전용이라 이 실습에서는 `lsof`와 `netstat`을 사용했다.
+
 ## 5) 트러블슈팅
 ### 5-1) `docker run -- name ...` 에서 이미지를 찾지 못함
 - 문제: `docker run -- name first-hello hello-world` 실행 시 `Unable to find image 'name:latest' locally`, `pull access denied for name`
@@ -582,6 +740,12 @@ remote.origin.url=https://github.com/hippie-jin/cody_all_E1-1.git
 - 확인: `~/.orbstack/bin/docker` 링크가 생성돼 있었고, `~/.bash_profile` 끝에 `source ~/.orbstack/shell/init.bash`가 추가돼 있었다.
 - 해결: 새 로그인 셸(`bash -l`)에서 `docker`가 `/usr/local/bin/docker`로 잡혔다. 기존 터미널은 새로 열어야 한다.
 
+### 5-7) 포트 충돌: `port is already allocated`
+- 문제: `docker run -d --name conflict-web -p 8082:80 codyssey-web:1.0` 실행 시 `Bind for 0.0.0.0:8082 failed: port is already allocated`가 발생했다. 같은 이름으로 다시 실행하면 `container name ... is already in use`도 발생했다.
+- 원인 가설: 호스트 8082 포트를 이미 다른 컨테이너(`custom-web`)가 사용 중이다. 실패한 컨테이너는 만들어진 채 남아(`Created`) 이름도 점유한다.
+- 확인: `docker ps`, `docker port custom-web`, `lsof -nP -iTCP:8082 -sTCP:LISTEN`, `netstat -an -p tcp | grep 8082`로 8082 사용 여부를 확인했다. `lsof`에는 `OrbStack`(PID 56164)이 나왔다. `docker ps -a`에서 실패한 컨테이너가 `Created`로 남은 것을 확인했다. 자세한 로그는 [4-10](#4-10-포트-충돌-진단과-해제)에 있다.
+- 해결: 남은 컨테이너를 `docker rm conflict-web`으로 지운 뒤 ① 다른 호스트 포트(`-p 8090:80`)로 실행하거나 ② 기존 컨테이너를 `docker stop custom-web`으로 중지해 포트를 풀었다. Docker 컨테이너가 연 포트의 PID는 OrbStack이므로 `kill`하지 않고 `docker stop`/`docker rm`으로 푼다. 컨테이너가 아닌 일반 프로세스는 `lsof`로 PID를 찾아 `kill`한다.
+
 ## 6) 검증 방법 요약
 | 항목 | 사용한 명령 | 확인한 내용 | 결과 위치 |
 |---|---|---|---|
@@ -594,13 +758,14 @@ remote.origin.url=https://github.com/hippie-jin/cody_all_E1-1.git
 | 포트 매핑 | `docker run -p 8082:80`, `-p 8083:80`, 브라우저 접속 | 주소창 포트와 응답 화면 | [4-7](#4-7-포트-매핑과-바인드-마운트), `screenshots/07_*` |
 | 바인드 마운트 | `docker run --mount type=bind`, `curl localhost:8083` 전/후 | 호스트 파일 수정이 재시작 없이 반영 | [4-7](#4-7-포트-매핑과-바인드-마운트), `screenshots/08_*` |
 | 볼륨 영속성 | `docker volume create`, `docker rm`, 새 컨테이너 연결 후 `cat` | 컨테이너 삭제 후에도 데이터 유지 | [4-8](#4-8-docker-볼륨-영속성) |
+| 포트 충돌 진단 | `docker ps`, `docker port`, `lsof -nP -iTCP:8082 -sTCP:LISTEN`, `netstat -an -p tcp`, `kill PID` | 충돌 오류 재현, 사용 중인 프로세스 확인, 포트 해제 | [4-10](#4-10-포트-충돌-진단과-해제), [5-7](#5-7-포트-충돌-port-is-already-allocated) |
 | Git 설정/연동 | `git config --list`, VS Code 로그인·소스 제어 화면 | 사용자·브랜치·원격 설정, GitHub 연동 | [4-9](#4-9-git-설정), `screenshots/10_*` |
 
 ## 7) 재현 방법 및 주의사항
 1. **경로:** 로그의 `/Users/hwang-jinjeon/...`는 내 PC 경로이다. 본인 환경에서는 저장소를 받은 폴더에서 `pwd`로 확인한 경로를 사용한다.
 2. **Docker 준비:** macOS는 OrbStack 앱을 먼저 실행해야 `docker` 명령이 동작한다. 서울캠퍼스처럼 `sudo`가 제한된 환경에서는 `brew install --cask orbstack`이 실패할 수 있다(트러블슈팅 5-5). 이 경우 공식 dmg를 받아 `/Applications`에 복사한다.
 3. **이미지 빌드:** 저장소 루트에서 `docker build -t codyssey-web:1.0 .`를 실행한다. `Dockerfile`과 `app/index.html`이 필요하다.
-4. **실행:** `docker run -d --name custom-web -p 8082:80 codyssey-web:1.0` 후 `http://localhost:8082`에 접속한다. 8082나 8083 포트가 이미 사용 중이면 다른 호스트 포트(예: 8090)로 바꾼다. 컨테이너 이름이 충돌하면 `docker rm -f 이름`으로 지우고 다시 실행한다(트러블슈팅 5-2).
+4. **실행:** `docker run -d --name custom-web -p 8082:80 codyssey-web:1.0` 후 `http://localhost:8082`에 접속한다. 8082나 8083 포트가 이미 사용 중이면 다른 호스트 포트(예: 8090)로 바꾼다. 사용 중인 프로세스를 찾는 방법은 4-10절을 따른다. 컨테이너 이름이 충돌하면 `docker rm -f 이름`으로 지우고 다시 실행한다(트러블슈팅 5-2).
 5. **바인드 마운트:** `--mount type=bind,source="$(pwd)/app",...`의 `source`는 절대 경로여야 하므로 반드시 저장소 루트에서 실행한다.
 6. **셸:** 로그는 macOS의 bash 3.2 기준이다. zsh에서도 같은 명령이 동작한다.
 7. **보안:** 이메일은 마스킹했고, 인증 정보는 macOS 키체인에 저장되어 저장소에 포함되지 않는다.
