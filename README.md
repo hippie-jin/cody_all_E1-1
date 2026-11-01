@@ -581,3 +581,26 @@ remote.origin.url=https://github.com/hippie-jin/cody_all_E1-1.git
 - 원인 가설: 이미 열려 있던 셸은 OrbStack이 추가한 PATH 설정을 아직 읽지 않았다.
 - 확인: `~/.orbstack/bin/docker` 링크가 생성돼 있었고, `~/.bash_profile` 끝에 `source ~/.orbstack/shell/init.bash`가 추가돼 있었다.
 - 해결: 새 로그인 셸(`bash -l`)에서 `docker`가 `/usr/local/bin/docker`로 잡혔다. 기존 터미널은 새로 열어야 한다.
+
+## 6) 검증 방법 요약
+| 항목 | 사용한 명령 | 확인한 내용 | 결과 위치 |
+|---|---|---|---|
+| 터미널 조작 | `pwd`, `ls -la`, `cd`, `mkdir -p`, `touch`, `cp`, `mv`, `cat`, `rm`, `rm -r` | 위치·목록(숨김 파일 포함)·이동·생성·복사·이름 변경·삭제·내용 확인 | [4-1](#4-1-터미널-조작) |
+| 권한 | `ls -l`, `ls -ld`, `chmod 600/644/755/000`, `chmod u+x` | 변경 전/후 권한 문자열 비교, 디렉토리 `r`/`x` 차이 | [4-2](#4-2-권한-실습) |
+| Docker 설치/점검 | `docker --version`, `docker info` | 클라이언트 버전, 데몬(Server) 응답 | [4-3](#4-3-dockerorbstack-설치-및-기본-점검), [logs/03_docker_setup.log](logs/03_docker_setup.log) |
+| Docker 운영 | `docker pull/images/ps/ps -a/logs/stats/stop/start` | 이미지 목록, 실행 중/종료 컨테이너, 로그, 리소스 | [4-4](#4-4-docker-기본-운영-명령) |
+| 컨테이너 실행 | `docker run hello-world`, `docker run -it ubuntu bash`, `docker exec`, `docker attach` | 정상 실행, 내부 명령 수행, exit 후 컨테이너 상태 차이 | [4-5](#4-5-컨테이너-실행-실습) |
+| 커스텀 이미지 | `docker build -t codyssey-web:1.0 .`, `docker exec custom-web printenv APP_ENV` | 빌드 성공, `ENV` 반영(`practice`) | [4-6](#4-6-커스텀-이미지-dockerfile-기반-방식-a), [Dockerfile](Dockerfile) |
+| 포트 매핑 | `docker run -p 8082:80`, `-p 8083:80`, 브라우저 접속 | 주소창 포트와 응답 화면 | [4-7](#4-7-포트-매핑과-바인드-마운트), `screenshots/07_*` |
+| 바인드 마운트 | `docker run --mount type=bind`, `curl localhost:8083` 전/후 | 호스트 파일 수정이 재시작 없이 반영 | [4-7](#4-7-포트-매핑과-바인드-마운트), `screenshots/08_*` |
+| 볼륨 영속성 | `docker volume create`, `docker rm`, 새 컨테이너 연결 후 `cat` | 컨테이너 삭제 후에도 데이터 유지 | [4-8](#4-8-docker-볼륨-영속성) |
+| Git 설정/연동 | `git config --list`, VS Code 로그인·소스 제어 화면 | 사용자·브랜치·원격 설정, GitHub 연동 | [4-9](#4-9-git-설정), `screenshots/10_*` |
+
+## 7) 재현 방법 및 주의사항
+1. **경로:** 로그의 `/Users/hwang-jinjeon/...`는 내 PC 경로이다. 본인 환경에서는 저장소를 받은 폴더에서 `pwd`로 확인한 경로를 사용한다.
+2. **Docker 준비:** macOS는 OrbStack 앱을 먼저 실행해야 `docker` 명령이 동작한다. 서울캠퍼스처럼 `sudo`가 제한된 환경에서는 `brew install --cask orbstack`이 실패할 수 있다(트러블슈팅 5-5). 이 경우 공식 dmg를 받아 `/Applications`에 복사한다.
+3. **이미지 빌드:** 저장소 루트에서 `docker build -t codyssey-web:1.0 .`를 실행한다. `Dockerfile`과 `app/index.html`이 필요하다.
+4. **실행:** `docker run -d --name custom-web -p 8082:80 codyssey-web:1.0` 후 `http://localhost:8082`에 접속한다. 8082나 8083 포트가 이미 사용 중이면 다른 호스트 포트(예: 8090)로 바꾼다. 컨테이너 이름이 충돌하면 `docker rm -f 이름`으로 지우고 다시 실행한다(트러블슈팅 5-2).
+5. **바인드 마운트:** `--mount type=bind,source="$(pwd)/app",...`의 `source`는 절대 경로여야 하므로 반드시 저장소 루트에서 실행한다.
+6. **셸:** 로그는 macOS의 bash 3.2 기준이다. zsh에서도 같은 명령이 동작한다.
+7. **보안:** 이메일은 마스킹했고, 인증 정보는 macOS 키체인에 저장되어 저장소에 포함되지 않는다.
