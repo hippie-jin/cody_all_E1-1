@@ -19,7 +19,7 @@
 - [x] 포트 매핑 접속(2회)
 - [x] 바인드 마운트 반영
 - [x] 볼륨 영속성
-- [ ] Git 설정 + GitHub/VSCode 연동
+- [ ] Git 설정 + GitHub/VSCode 연동 (Git 설정 완료, GitHub 로그인 증거 추가 예정)
 
 ## 4) 수행 로그
 
@@ -512,6 +512,29 @@ Data survives
 ```
 
 - 첫 컨테이너(`volume-first`)를 삭제했는데도 새 컨테이너(`volume-second`)에서 `/data/proof.txt`가 그대로 읽힌다. 데이터는 컨테이너가 아니라 볼륨에 저장되어 있기 때문이다.
+
+### 4-9) Git 설정
+검증: `git config --list`로 사용자 이름, 이메일, 기본 브랜치(`init.defaultbranch=main`), 원격 저장소(`remote.origin.url`)를 확인했다. 이메일은 마스킹했다.
+
+```text
+$ git config --list
+credential.helper=osxkeychain
+init.defaultbranch=main
+user.name=hippie-jin
+user.email=h*******@naver.com
+init.defaultbranch=main
+core.repositoryformatversion=0
+core.filemode=true
+core.bare=false
+core.logallrefupdates=true
+core.ignorecase=true
+core.precomposeunicode=true
+remote.origin.url=https://github.com/hippie-jin/cody_all_E1-1.git
+```
+
+- `credential.helper=osxkeychain`: GitHub 인증 정보를 설정 파일이 아니라 macOS 키체인에 저장한다. 그래서 `remote.origin.url`에 토큰이 들어 있지 않다.
+- `core.ignorecase=true`: macOS는 파일 이름의 대소문자를 구분하지 않아서 생긴 설정이다. `dockerfile`을 `Dockerfile`로 바꿔야 했던 이유와 연결된다.
+- 이 저장소는 `remote.origin.url`로 GitHub(`hippie-jin/cody_all_E1-1`)와 연결되어 있다.
 
 ## 5) 트러블슈팅
 ### 5-1) `docker run -- name ...` 에서 이미지를 찾지 못함
